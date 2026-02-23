@@ -6,8 +6,7 @@ This project simulates riffle shuffling as a Markov chain on permutations.
 A state is the entire ordering of the deck (a permutation).
 For n = 8, there are 8! = 40,320 possible orderings.
 
-## What the script measures (matches the meeting notes)
-
+## What the script measures
 For each shuffle count k = 0..K:
 
 1) **Empirical distribution over orderings**
