@@ -117,9 +117,9 @@ def export_full_distribution_csv(counts: Counter, trials: int, k: int, filename:
 # -----------------------------
 def plot_tv_vs_shuffles(tv_values: List[float], shuffle_values: List[int]) -> None:
     plt.figure(figsize=(8, 6))
-    plt.plot(tv_values, shuffle_values, marker="o")
-    plt.xlabel("Total Variation Distance")
-    plt.ylabel("Number of Shuffles")
+    plt.plot(shuffle_values, tv_values, marker="o")
+    plt.xlabel("Number of Shuffles")
+    plt.ylabel("Total Variation Distance")
     plt.title("TV Distance vs Number of Shuffles")
     plt.grid(True)
     plt.tight_layout()
