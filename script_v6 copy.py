@@ -19,16 +19,20 @@ def gsr_riffle_shuffle(deck: List[int], rng: random.Random) -> List[int]:
     i = j = 0
     while i < len(left) or j < len(right):
         if i == len(left):
-            out.append(right[j]); j += 1
+            out.append(right[j])
+            j += 1
         elif j == len(right):
-            out.append(left[i]); i += 1
+            out.append(left[i])
+            i += 1
         else:
             remL = len(left) - i
             remR = len(right) - j
             if rng.random() < remL / (remL + remR):
-                out.append(left[i]); i += 1
+                out.append(left[i])
+                i += 1
             else:
-                out.append(right[j]); j += 1
+                out.append(right[j])
+                j += 1
     return out
 
 
@@ -53,7 +57,7 @@ def top_states(counts: Counter, trials: int, top: int = 10) -> List[Tuple[Tuple[
 
 
 # -----------------------------
-# Simple per-shuffle stats
+# Simple per-shuffle “stats”
 # -----------------------------
 def shannon_entropy_bits(counts: Counter, trials: int) -> float:
     H = 0.0
@@ -64,10 +68,6 @@ def shannon_entropy_bits(counts: Counter, trials: int) -> float:
 
 
 def marginal_position_distribution(counts: Counter, trials: int, card: int, n: int) -> List[float]:
-    """
-    Returns a list dist[pos-1] = P(card is at position pos), pos = 1..n
-    computed from the empirical distribution over full orderings.
-    """
     pos_counts = [0] * n
     for state, c in counts.items():
         pos = state.index(card)
@@ -76,10 +76,6 @@ def marginal_position_distribution(counts: Counter, trials: int, card: int, n: i
 
 
 def l1_distance_to_uniform_full_space(counts: Counter, trials: int, n: int) -> float:
-    """
-    L1 distance between empirical π_k and uniform U over all n! states:
-      ||π - U||_1 = sum_{σ} |π(σ) - 1/n!|
-    """
     N = factorial(n)
     u = 1.0 / N
     seen = len(counts)
@@ -94,10 +90,6 @@ def l1_distance_to_uniform_full_space(counts: Counter, trials: int, n: int) -> f
 
 
 def tv_distance_to_uniform_full_space(counts: Counter, trials: int, n: int) -> float:
-    """
-    Total variation distance:
-      TV(π, U) = (1/2) * ||π - U||_1
-    """
     return 0.5 * l1_distance_to_uniform_full_space(counts, trials, n)
 
 
@@ -113,21 +105,7 @@ def export_full_distribution_csv(counts: Counter, trials: int, k: int, filename:
 
 
 # -----------------------------
-# Plot TV distance vs # shuffles
-# -----------------------------
-def plot_tv_vs_shuffles(tv_values: List[float], shuffle_values: List[int]) -> None:
-    plt.figure(figsize=(8, 6))
-    plt.plot(shuffle_values, tv_values, marker="o")
-    plt.xlabel("Number of Shuffles")
-    plt.ylabel("Total Variation Distance")
-    plt.title("TV Distance vs Number of Shuffles")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-
-# -----------------------------
-# Main report
+# Main report + graph
 # -----------------------------
 def run_report(
     n: int = 8,
@@ -143,17 +121,17 @@ def run_report(
     total_states = factorial(n)
     uniform_prob = 1.0 / total_states
 
-    tv_values = []
-    shuffle_values = []
-
     print("\n" + "=" * 86)
-    print("MARKOV CHAIN DEMO: RIFFLE SHUFFLE ON PERMUTATIONS (n=8, concepts up to Ch. 1.5)")
+    print("MARKOV CHAIN DEMO: RIFFLE SHUFFLE ON PERMUTATIONS")
     print("=" * 86)
     print(f"State space: all orderings of {n} cards (|S| = {n}! = {total_states:,}).")
     print(f"Uniform benchmark: each ordering would have probability 1/{total_states:,} ≈ {uniform_prob:.8f}")
     print(f"Trials per k: {trials:,} | Seed: {seed}")
     print(f"Tracked marginal: position distribution of card {tracked_card}")
     print("Per k, we print summaries of the empirical distribution π_k over states.\n")
+
+    k_values = []
+    tv_values = []
 
     for k in range(max_shuffles + 1):
         counts = empirical_distribution_after_k(n=n, k=k, trials=trials, rng=rng)
@@ -163,10 +141,7 @@ def run_report(
         p_identity = counts[tuple(range(1, n + 1))] / trials
         H = shannon_entropy_bits(counts, trials)
         l1 = l1_distance_to_uniform_full_space(counts, trials, n)
-        tv = tv_distance_to_uniform_full_space(counts, trials, n)
-
-        tv_values.append(tv)
-        shuffle_values.append(k)
+        tv = 0.5 * l1
 
         marg = marginal_position_distribution(counts, trials, tracked_card, n)
         marg_str = " ".join(f"{p:.3f}" for p in marg)
@@ -176,9 +151,9 @@ def run_report(
         print(f"  Distinct orderings seen: {distinct:,} / {total_states:,}")
         print(f"  P(identity ordering) ≈ {p_identity:.6f}")
         print(f"  Top-{min(top, distinct)} probability mass ≈ {mass_top10:.3f}")
-        print(f"  Entropy H(π_k) ≈ {H:.2f} bits (max possible is log2(8!) ≈ {log2(total_states):.2f})")
-        print(f"  L1 distance to uniform over ALL {total_states:,} orderings ≈ {l1:.4f}")
-        print(f"  TV distance to uniform over ALL {total_states:,} orderings ≈ {tv:.4f}")
+        print(f"  Entropy H(π_k) ≈ {H:.2f} bits (max possible is log2({n}!) ≈ {log2(total_states):.2f})")
+        print(f"  L1 distance to uniform ≈ {l1:.6f}")
+        print(f"  TV distance to uniform ≈ {tv:.6f}")
         print(f"  Marginal: P(card {tracked_card} at position 1..{n}) =")
         print(f"    {marg_str}")
 
@@ -191,17 +166,33 @@ def run_report(
             export_full_distribution_csv(counts, trials, k, fname)
             print(f"  Wrote: {fname}")
 
-    print("\nDone.\n")
+        k_values.append(k)
+        tv_values.append(tv)
 
-    # Graph: TV on x-axis, # of shuffles on y-axis
-    plot_tv_vs_shuffles(tv_values, shuffle_values)
+    # -----------------------------
+    # Plot after all computations
+    # -----------------------------
+    plt.figure(figsize=(8, 5))
+    plt.plot(k_values, tv_values, marker="o")
+    plt.xlabel("Number of shuffles")
+    plt.ylabel("TV distance")
+    plt.title(f"TV Distance to Uniform vs Number of Shuffles (n={n})")
+    plt.grid(True)
+
+    plt.savefig("tv_distance_plot.png", dpi=300, bbox_inches="tight")
+    print("\nSaved graph as tv_distance_plot.png")
+
+    plt.show()
+    input("Press Enter to close the graph...")
+
+    print("\nDone.\n")
 
 
 if __name__ == "__main__":
     run_report(
-        n=5,
+        n=9,
         max_shuffles=8,
-        trials=50_000,
+        trials=50000000,
         seed=42,
         top=10,
         tracked_card=1,
